@@ -133,6 +133,9 @@ const TIME_FLAT=30;
 const TIME_MIN=30;
 const DAY_TARGET=5;
 const MISS_PENALTY=20;
+// Kara finalna dopiero po zamknięciu tygodnia. Bieżący tydzień liczony bez kary
+// (pokazujemy postęp). Zamknięte tygodnie mają karę wliczoną w snapshot.
+let _applyPenalty=false;
 const TEAM_POOL=600;
 const ICONS={walk:'🚶',bike:'🚴',swim:'🏊',gym:'🏋️',yoga:'🧘',dance:'💃',fight:'⚔️',other:'💪'};
 const LN={walk:'Spacer',bike:'Rower',swim:'Pływanie',gym:'Siłownia',yoga:'Joga/Pilates',dance:'Taniec',fight:'Walki',other:'Trening'};
@@ -192,9 +195,10 @@ function calcMember(memberId, state, isDsq){
   const missDays=Math.max(0,DAY_TARGET-Math.min(DAY_TARGET,activeDays));
   // DSQ: punkty ujemne się kasują (kara=0), dodatnie zostają.
   const penalty=isDsq?0:missDays*MISS_PENALTY;
+  const penaltyApplied=_applyPenalty?penalty:0;
   const rawTotal=dailyPts+regBonus+runBonus;
-  const total=Math.max(0,Math.round(rawTotal-penalty));
-  return{dailyPts,regBonus,runBonus,penalty,missDays,rawTotal:Math.round(rawTotal),total,totalKm:Math.round(totalKm*10)/10,runDays,activeDays,timeActCount,dayBreakdown,dsq:!!isDsq};
+  const total=Math.max(0,Math.round(rawTotal-penaltyApplied));
+  return{dailyPts,regBonus,runBonus,penalty,penaltyApplied,missDays,rawTotal:Math.round(rawTotal),total,totalKm:Math.round(totalKm*10)/10,runDays,activeDays,timeActCount,dayBreakdown,dsq:!!isDsq};
 }
 
 function teamBonusPct(active, full){
@@ -364,7 +368,7 @@ function renderApp(payload){
       +'<span>Aktywności: <b>'+Math.round(m.dailyPts)+' pkt</b></span>'
       +'<span>Regularność: <b style="color:#2d8a56">+'+m.regBonus+'</b></span>'
       +'<span>Bieganie: <b style="color:#e8553d">+'+m.runBonus+'</b></span>'
-      +(m.penalty>0?'<span>Kara ('+m.missDays+' dni <5): <b style="color:#c8392b">−'+m.penalty+'</b></span>':'')
+      +(m.penalty>0?(m.penaltyApplied>0?'<span>Kara ('+m.missDays+' dni <5): <b style="color:#c8392b">−'+m.penalty+'</b></span>':'<span style="color:#b06a00">Postęp: <b>'+m.activeDays+'/5 dni</b> · jeszcze '+m.missDays+' do kompletu</span>'):'')
       +(m.capped?'<span>Wkład (limit): <b style="color:#b06a00">'+Math.round(m.contribution)+' pkt</b></span>':'')
       +'<span>Łącznie: <b style="color:'+color+'">'+m.total+' pkt</b></span>'
       +'</div>'
@@ -437,7 +441,7 @@ function renderApp(payload){
       +'<span>Aktywności: <b>'+Math.round(m.dailyPts)+' pkt</b></span>'
       +'<span>Regularność: <b style="color:#2d8a56">+'+m.regBonus+'</b></span>'
       +'<span>Bieganie: <b style="color:#e8553d">+'+m.runBonus+'</b></span>'
-      +(m.penalty>0?'<span>Kara ('+m.missDays+' dni <5): <b style="color:#c8392b">−'+m.penalty+'</b></span>':'')
+      +(m.penalty>0?(m.penaltyApplied>0?'<span>Kara ('+m.missDays+' dni <5): <b style="color:#c8392b">−'+m.penalty+'</b></span>':'<span style="color:#b06a00">Postęp: <b>'+m.activeDays+'/5 dni</b> · jeszcze '+m.missDays+' do kompletu</span>'):'')
       +(m.dsq?'<span style="color:#6b7280"><b>DSQ</b> — poza drużyną, kara wyzerowana</span>':'')
       +shareLine
       +'<span>Łącznie: <b style="color:'+color+'">'+finalPts+' pkt</b></span>'
